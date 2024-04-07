@@ -13,10 +13,9 @@ import re
 from typing import ClassVar, Iterable
 import traceback
 import zoneinfo
-import ruamel.yaml as yaml
 from hashlib import md5
-import logging
-import logging
+
+import ruamel.yaml as yaml
 
 
 FORMAT = '[%(asctime)s] %(message)s'
@@ -138,13 +137,11 @@ class SubprocessCommand(BaseModel):
             return process.returncode
 
 class Job(YamlSerde):
-    # __mro__: list[type] = [BaseModel, YamlSerde]
     job_class_name: str
     var_job_args: dict[str, str]
     command: SubprocessCommand
 
     def get_job_config(self) -> JobConfig:
-        # return globals()[self.job_class_name]()
         return globals()["job_config"]
     
     def create_instance(self, dry_run: bool = False, timestamp_provider: Callable[[], dt.datetime] = dt.datetime.now) -> JobInstance:
@@ -174,7 +171,6 @@ class Job(YamlSerde):
         return job_file_path
 
 class JobInstance(YamlSerde):
-    # __mro__: list[type] = [BaseModel, YamlSerde]
     log_file_path_str: str
     results_file_path_str: str
     job: Job
@@ -303,15 +299,13 @@ job_config = ConcreteJobConfig(env_type='prod',
     state_location=state_location,
     constant_args=dict(to_print='dupa'), 
     variable_args=[
-        dict(aaa='1'),
-        dict(aaa='2')
+        dict(aaa='1'), 
+        dict(aaa='2'),
     ],
 )
 
 
 if __name__ == '__main__':
-
-
     job_config.crete_job_files()
 
     worker = JobWorker(state_location=state_location, job_config=job_config)
