@@ -66,7 +66,7 @@ class StateLocationConfig(BaseModel):
 class YamlSerde(BaseModel):
     def dump(self, path: Path) -> None:
         with path.open("w") as f:
-            f.write(yaml.safe_dump(self.model_dump()))
+            f.write(yaml.dump(self.model_dump()))
 
 
     @classmethod
@@ -90,9 +90,9 @@ class JobConfig(BaseModel):
     job_extension: ClassVar[str] = ".job.yaml"
 
     job_instance_name_format: ClassVar[str] = "{job_class_name}_{var_job_args_hash}_{timestamp}"
-    job_instance_extension: ClassVar[str] = "jobinstance.yaml"
-    job_instance_result_extension: ClassVar[str] = "result.yaml"
-    job_instance_log_extension: ClassVar[str] = "log.txt"
+    job_instance_extension: ClassVar[str] = ".jobinstance.yaml"
+    job_instance_result_extension: ClassVar[str] = ".result.yaml"
+    job_instance_log_extension: ClassVar[str] = ".log.txt"
     
 
 
@@ -166,9 +166,14 @@ class Job(YamlSerde):
             job_class_name=self.job_class_name,
             var_job_args_hash=job_config.var_job_args_hash(variable_args=self.var_job_args)
         ) + job_config.job_extension)
-        with job_file_path.open("w") as job_file:
-            job_file.write(yaml.safe_dump(self.model_dump()))
-        return job_file_path
+        self.dump(job_file_path)
+
+class JobInstanceResult(YamlSerde):
+    command: SubprocessCommand
+    success: bool
+    started_at: dt.datetime
+    log: str
+    run_time_seconds: float
 
 class JobInstance(YamlSerde):
     log_file_path_str: str
@@ -179,7 +184,6 @@ class JobInstance(YamlSerde):
     
 
     def dump(self, jobs_path: Path) -> None:
-        content = yaml.safe_dump(self.model_dump())
         job_config_class = self.job.get_job_config_class()
         job_file_path = jobs_path / job_config_class.job_instance_name_format.format(
             job_class_name=self.job.job_class_name,
@@ -187,9 +191,7 @@ class JobInstance(YamlSerde):
             timestamp=self.timestamp.isoformat()
         )
         
-        with job_file_path.open("w") as job_file:
-            job_file.write(content)
-        return self
+        self.dump(job_file_path)
 
     @classmethod
     def from_job_file(cls, job_file_path: Path) -> JobInstance:
@@ -215,14 +217,13 @@ class JobInstance(YamlSerde):
             logger.error(f'Error: {e}', exc_info=e)
         finally:
             logger.debug(f'FINISHED: {self.job.var_job_args}, success={success}')
-            with result_file_path.open("w") as result_file:
-                yaml.dump(dict(
+            JobInstanceResult(
                     command=self.job.command,
                     success=success,
                     started_at=started_at.isoformat(),
                     log=log_file_path.as_posix(),
-                    run_time_seconds=(dt.datetime.utcnow() - started_at).total_seconds()
-                ), result_file)
+                    run_time_seconds=(dt.datetime.now() - started_at).total_seconds()
+            ).dump(result_file_path)
 
 
 
