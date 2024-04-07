@@ -68,9 +68,10 @@ class AbstractJobConfig(BaseModel):
     state_location: StateLocationConfig
     keep_retrying: bool = False
     dry_run: bool = False
+    command: str
     variable_job_args: dict[str, str] = {}
     constant_job_args: dict[str, str] = {}
-
+    
     @classmethod
     def is_job_file(cls, job_file_path: Path) -> bool:
         return job_file_path.suffix == '.job'
@@ -92,7 +93,7 @@ class AbstractJobConfig(BaseModel):
         return self
 
     def get_subprocess_command(self) -> SubprocessCommand:
-        return SubprocessCommand(command='echo', args=['Hello, World!'])
+        return SubprocessCommand(command=self.command, args=[f"{name}={value}" for name, value in (self.constant_job_args | self.variable_job_args).items()])
 
     @classmethod
     def from_job_file(cls, job_file_path: Path) -> AbstractJobConfig:
@@ -145,6 +146,7 @@ T = TypeVar('T', bound=AbstractJobConfig)
 
 class JobFactory(BaseModel, Generic[T]):
     job_class: type[AbstractJobConfig]
+    command: str
     constant_job_args: dict[str, str] = {}
     variable_job_args: list[dict[str, str]] = []
 
@@ -223,8 +225,20 @@ class JobWorker:
 if __name__ == '__main__':
     class ConcreteJobConfig(AbstractJobConfig):
         env_type: str
+    
+    factory = JobFactory(
+        command="echo", 
+        job_class=ConcreteJobConfig, 
+        constant_job_args=["to_print='dupa'"], 
+        variable_job_args=[
+            dict(aaa=1),
+            dict(aaa=2)
+        ],
+    )
+    factory.create_job('test')
 
     state_location = StateLocationConfig.user_home_relative('test')
+    state_location.make_dirs()
     job_class = ConcreteJobConfig
     worker = JobWorker(state_location, job_class)
     worker.start_worker()
