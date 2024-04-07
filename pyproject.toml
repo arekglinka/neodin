@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "neodin"
+version = "0.1.0"
+description = ""
+authors = ["ArekGlinka <arekglinka@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+pydantic = "2.5.2"
+ruamel-yaml = "0.17.26"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
